@@ -1,0 +1,19 @@
+{
+  "name": "chat_module",
+  "version": "1.0.0",
+  "description": "chat module for digital service",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js"
+  },
+  "author": "Akhil Raj",
+  "license": "ISC",
+  "dependencies": {
+    "chat_module": "file:",
+    "express": "^4.17.3",
+    "http": "^0.0.1-security",
+    "nodemon": "^2.0.15",
+    "socket.io": "^4.4.1"
+  }
+}
