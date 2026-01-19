@@ -1,108 +1,102 @@
-// import { writeFile } from "fs";
-// import { Server } from "socket.io";
-const express = require('express');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
-const http = require('http').createServer(app)
-const io = require('socket.io')(http, {
-    cors: {
-        origin: '*',
-    },
-    //   maxHttpBufferSize: 1e8   // 100 MB
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: { origin: "*" }
 });
-
-
-app.get('/', (req, res) => {
-    res.send("Node Server is running. Yay!!")
-})
 
 app.use(express.json());
 
-// io.on('connection', socket => {
-//     console.log('Connected...');
-//     socket.on('disconnect', () => {
-//         socket.leave()
-//     })
-
-//     socket.on("create_room", (msg) => {
-//         console.log('message: ' + msg.user);
-//         console.log('room_id: ' + msg.room_id);
-//         socket.join(msg.room_id);
-//     });
-//     socket.on("new_message_customer", (data) => {
-//         console.log("sid_msg", data);
-//         socket.to(data.room_id).emit("new_message_customer", data);
-//     });
-//     socket.on("new_message_user", (data) => {
-//         socket.to(data.room_id).emit("user_message", data);
-//         console.log("from user",data);
-//     })
-//     socket.on("connect_error", (err) => {
-//         console.log(`connect_error due to ${err.message}`);
-//     });
-// });
-
-io.on('connection', socket => {
-    console.log('Client connected:', socket.id);
-
-    socket.on("create_room", (data) => {
-        const roomId = data.room_id || data.conversationId;
-        console.log("Joining room:", roomId);
-        socket.join(roomId.toString());
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Client disconnected');
-    });
+/* ===============================
+   HEALTH CHECK
+================================ */
+app.get("/", (req, res) => {
+  res.send("Socket Server Running");
 });
 
+/* ===============================
+   SOCKET CONNECTION
+================================ */
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
 
+  /* ========= JOIN ORG / APP / WHATSAPP ========= */
+  socket.on("join_context", ({ orgId, appId, waAccountId }) => {
+    socket.join(`org_${orgId}`);
+    socket.join(`org_${orgId}:app_${appId}`);
+    socket.join(`org_${orgId}:app_${appId}:wa_${waAccountId}`);
+  });
 
-// app.post('/api/send_message', (req, res) => {
-//     const { room_id, message, time, toUserId, fromUserId } = req.body;
-//     console.log(req.body)
-//     console.log(`Message received: ${message} from user ${fromUserId} to ${toUserId} in room ${room_id} at ${time}`);
-//     // io.to(room_id).emit('new_message_customer', req.body);
-//     io.to('crm_dxb_users').emit('new_message_customer', req.body);
-//     res.json({ success: true });
-// });
+  /* ========= JOIN CUSTOMER CHAT ========= */
+  socket.on("join_chat", ({ orgId, appId, waAccountId, chatId }) => {
+    const room =
+      `org_${orgId}:app_${appId}:wa_${waAccountId}:chat_${chatId}`;
+    socket.join(room);
+  });
 
-app.post('/api/send_message', (req, res) => {
-    try {
-        const data = req.body;
+  /* =====================================================
+     INTERNAL USER ↔ USER CHAT (FOR FUTURE USE)
+     ❌ CURRENTLY NOT USED
+  ====================================================== */
 
-        console.log("Realtime message received:", data);
+  /*
+  socket.on("join_internal_chat", ({ orgId, appId, userId }) => {
+    socket.join(`org_${orgId}:app_${appId}:user_${userId}`);
+  });
+  */
 
-        // Determine room
-        const roomId = data.conversationId || data.from;
+  /*
+  socket.on("internal_user_message", (data) => {
+    const room =
+      `org_${data.orgId}:app_${data.appId}:user_${data.toUserId}`;
+    io.to(room).emit("internal_user_message", data);
+  });
+  */
 
-        if (!roomId) {
-            return res.status(400).json({ error: "Room not resolved" });
-        }
-
-        // Decide event based on direction
-        const eventName = data.inbound
-            ? "new_message_customer"
-            : "new_message_user";
-
-        // Emit full DTO (no parsing)
-        io.to(roomId.toString()).emit(eventName, data);
-
-        return res.json({ success: true });
-
-    } catch (err) {
-        console.error("Socket error", err);
-        return res.status(500).json({ error: "Internal server error" });
-    }
+  socket.on("disconnect", () => {
+    console.log("Socket disconnected:", socket.id);
+  });
 });
 
+/* ===============================
+   BACKEND → SOCKET PUSH API
+================================ */
+app.post("/api/socket/push", (req, res) => {
+  const {
+    event,
+    orgId,
+    appId,
+    waAccountId,
+    chatId
+  } = req.body;
 
+  /* ===== Customer ↔ Business Chat ===== */
+  if (chatId) {
+    const room =
+      `org_${orgId}:app_${appId}:wa_${waAccountId}:chat_${chatId}`;
+    io.to(room).emit(event, req.body);
+  }
 
-io.of("/").adapter.on("create-room", (room) => {
-    console.log(`room ${room} was created`);
+  /* ===== Internal Chat (Future) ===== */
+  /*
+  if (req.body.toUserId) {
+    const room =
+      `org_${orgId}:app_${appId}:user_${req.body.toUserId}`;
+    io.to(room).emit(event, req.body);
+  }
+  */
+
+  res.json({ success: true });
 });
 
-var port = process.env.PORT || 3000;
-http.listen(port,'0.0.0.0', function (err) {
-    if (err) console.log(err);
-    console.log('Listening on port', port);
+/* ===============================
+   SERVER START
+================================ */
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, "0.0.0.0", () => {
+  console.log("Socket server running on port", PORT);
 });
