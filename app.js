@@ -32,11 +32,13 @@ io.on("connection", (socket) => {
   });
 
   /* ========= JOIN CUSTOMER CHAT ========= */
-  socket.on("join_chat", ({ orgId, appId, waAccountId, chatId }) => {
+  socket.on("join_chat", ({ orgId, appId, waAccountId, conversationId }) => {
     const room =
-      `org_${orgId}:app_${appId}:wa_${waAccountId}:chat_${chatId}`;
+      `org_${orgId}:app_${appId}:wa_${waAccountId}:conv_${conversationId}`;
     socket.join(room);
   });
+  console.log("Room Name")
+  console.log(room)
 
   /* =====================================================
      INTERNAL USER ↔ USER CHAT (FOR FUTURE USE)
@@ -65,19 +67,19 @@ io.on("connection", (socket) => {
 /* ===============================
    BACKEND → SOCKET PUSH API
 ================================ */
-app.post("/api/socket/push", (req, res) => {
+app.post("/api/send_message", (req, res) => {
   const {
     event,
     orgId,
     appId,
     waAccountId,
-    chatId
+    conversationId
   } = req.body;
-
+  console.log(req.body)
   /* ===== Customer ↔ Business Chat ===== */
-  if (chatId) {
+  if (conversationId) {
     const room =
-      `org_${orgId}:app_${appId}:wa_${waAccountId}:chat_${chatId}`;
+      `org_${orgId}:app_${appId}:wa_${waAccountId}:conv_${conversationId}`;
     io.to(room).emit(event, req.body);
   }
 
