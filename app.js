@@ -38,7 +38,7 @@ io.on("connection", (socket) => {
     socket.join(room);
   });
   console.log("Room Name")
-  console.log(room)
+
 
   /* =====================================================
      INTERNAL USER ↔ USER CHAT (FOR FUTURE USE)
