@@ -70,11 +70,6 @@ io.on("connection", (socket) => {
 
 
 app.post("/api/send_message", (req, res) => {
-
-  //   console.log("🧾 FULL INCOMING PAYLOAD (RAW):");
-  // console.log(JSON.stringify(req.body, null, 2));
-
-
   const {
     orgId,
     appId,
