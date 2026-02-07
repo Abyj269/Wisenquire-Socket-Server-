@@ -25,16 +25,16 @@ io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
 
   /* ========= JOIN ORG / APP / WHATSAPP ========= */
-  socket.on("join_context", ({ orgId, appId, waAccountId }) => {
-    socket.join(`org_${orgId}`);
-    socket.join(`org_${orgId}:app_${appId}`);
-    socket.join(`org_${orgId}:app_${appId}:wa_${waAccountId}`);
+  socket.on("join_context", ({ brId, appId, waAccountId }) => {
+    socket.join(`org_${brId}`);
+    socket.join(`org_${brId}:app_${appId}`);
+    socket.join(`org_${brId}:app_${appId}:wa_${waAccountId}`);
   });
 
   /* ========= JOIN CUSTOMER CHAT ========= */
-  socket.on("join_chat", ({ orgId, appId, waAccountId, conversationId }) => {
+  socket.on("join_chat", ({ brId, appId, waAccountId, conversationId }) => {
     const room =
-      `org_${orgId}:app_${appId}:wa_${waAccountId}:conv_${conversationId}`;
+      `org_${brId}:app_${appId}:wa_${waAccountId}:conv_${conversationId}`;
     socket.join(room);
   });
   console.log("Room Name")
@@ -71,7 +71,7 @@ io.on("connection", (socket) => {
 
 app.post("/api/send_message", (req, res) => {
   const {
-    orgId,
+    brId,
     appId,
     waAccountId,
     conversationId,
@@ -79,10 +79,10 @@ app.post("/api/send_message", (req, res) => {
     text,
     waMessageId
   } = req.body;
-
+  console.log(req.body)
   const payload = {
     event: "new_message_customer",
-    orgId: String(orgId),
+    brId: String(brId),
     appId: String(appId),
     waAccountId: String(waAccountId),
     conversationId: String(conversationId),
@@ -93,7 +93,7 @@ app.post("/api/send_message", (req, res) => {
     timestamp: Date.now() // 🔥 SAFE
   };
 
-  const waRoom = `org_${orgId}:app_${appId}:wa_${waAccountId}`;
+  const waRoom = `br_${brId}:app_${appId}:wa_${waAccountId}`;
   const convRoom = `${waRoom}:conv_${conversationId}`;
 
   // Emit ONLY clean payload
