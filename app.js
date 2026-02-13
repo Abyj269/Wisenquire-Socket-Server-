@@ -25,19 +25,33 @@ io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
 
   /* ========= JOIN ORG / APP / WHATSAPP ========= */
-  socket.on("join_context", ({ orgId, appId, waAccountId }) => {
-    socket.join(`org_${orgId}`);
-    socket.join(`org_${orgId}:app_${appId}`);
-    socket.join(`org_${orgId}:app_${appId}:wa_${waAccountId}`);
-  });
+  // socket.on("join_context", ({ orgId, appId, waAccountId }) => {
+  //   socket.join(`org_${orgId}`);
+  //   socket.join(`org_${orgId}:app_${appId}`);
+  //   socket.join(`org_${orgId}:app_${appId}:wa_${waAccountId}`);
+  // });
+  socket.on("join_context", ({ branchId, appId, waAccountId }) => {
+  socket.join(`branch_${branchId}`);
+  socket.join(`branch_${branchId}:app_${appId}`);
+  socket.join(`branch_${branchId}:app_${appId}:wa_${waAccountId}`);
+});
+
 
   /* ========= JOIN CUSTOMER CHAT ========= */
-  socket.on("join_chat", ({ orgId, appId, waAccountId, conversationId }) => {
-    const room =
-      `org_${orgId}:app_${appId}:wa_${waAccountId}:conv_${conversationId}`;
-    socket.join(room);
-  });
-  console.log("Room Name")
+  // socket.on("join_chat", ({ orgId, appId, waAccountId, conversationId }) => {
+  //   const room =
+  //     `org_${orgId}:app_${appId}:wa_${waAccountId}:conv_${conversationId}`;
+  //   socket.join(room);
+  // });
+  // console.log("Room Name")
+  socket.on("join_chat", ({ branchId, appId, waAccountId, conversationId }) => {
+  const room =
+    `branch_${branchId}:app_${appId}:wa_${waAccountId}:conv_${conversationId}`;
+  socket.join(room);
+
+  console.log("🟢 Joined chat room:", room);
+});
+
 
 
   /* =====================================================
@@ -69,42 +83,45 @@ io.on("connection", (socket) => {
 ================================ */
 
 
-app.post("/api/send_message", (req, res) => {
-  const {
-    orgId,
-    appId,
-    waAccountId,
-    conversationId,
-    from,
-    text,
-    waMessageId
-  } = req.body;
+// app.post("/api/send_message", (req, res) => {
+//   const {
+//     //orgId,
+//     branchId,
+//     appId,
+//     waAccountId,
+//     conversationId,
+//     from,
+//     text,
+//     waMessageId
+//   } = req.body;
 
-  const payload = {
-    event: "new_message_customer",
-    orgId: String(orgId),
-    appId: String(appId),
-    waAccountId: String(waAccountId),
-    conversationId: String(conversationId),
-    inbound: true,
-    from: String(from),
-    messageText: String(text),
-    messageId: waMessageId || Date.now(),
-    timestamp: Date.now() // 🔥 SAFE
-  };
+//   const payload = {
+//     event: "new_message_customer",
+//     orgId: String(orgId),
+//     appId: String(appId),
+//     waAccountId: String(waAccountId),
+//     conversationId: String(conversationId),
+//     inbound: true,
+//     from: String(from),
+//     messageText: String(text),
+//     messageId: waMessageId || Date.now(),
+//     timestamp: Date.now() // 🔥 SAFE
+//   };
 
-  const waRoom = `org_${orgId}:app_${appId}:wa_${waAccountId}`;
-  const convRoom = `${waRoom}:conv_${conversationId}`;
+//   //const waRoom = `org_${orgId}:app_${appId}:wa_${waAccountId}`;
+//   const waRoom =
+//   `branch_${branchId}:app_${appId}:wa_${waAccountId}`;
+//   const convRoom = `${waRoom}:conv_${conversationId}`;
 
-  // Emit ONLY clean payload
-  io.to(waRoom).emit("new_message_customer", payload);
+//   // Emit ONLY clean payload
+//   io.to(waRoom).emit("new_message_customer", payload);
 
-  if (conversationId) {
-    io.to(convRoom).emit("new_message_customer", payload);
-  }
+//   if (conversationId) {
+//     io.to(convRoom).emit("new_message_customer", payload);
+//   }
 
-  res.json({ success: true });
-});
+//   res.json({ success: true });
+// });
 
 
 
@@ -140,6 +157,83 @@ app.post("/api/send_message", (req, res) => {
 
 //   res.json({ success: true });
 // });
+
+app.post("/api/send_message", (req, res) => {
+  const {
+    brId,
+    appId,
+    waAccountId,
+    conversationId,
+    from,
+    text,
+    waMessageId
+  } = req.body;
+
+  const branchId = brId;
+
+  if (!branchId || !appId || !waAccountId) {
+    console.error("❌ Missing routing data:", req.body);
+    return res.status(400).json({ error: "Missing routing data" });
+  }
+
+  // const payload = {
+  //   event: "new_message_customer",
+  //   branchId: String(branchId),
+  //   appId: String(appId),
+  //   waAccountId: String(waAccountId),
+  //   conversationId: String(conversationId),
+  //   inbound: true,
+  //   from: String(from),
+  //   text: String(text),
+  //   type: req.body.type || "TEXT",
+  //   waMessageId: waMessageId || Date.now(),
+  //   timestamp: Date.now()
+  // };
+  const payload = {
+  event: "new_message_customer",
+  branchId: String(branchId),
+  appId: String(appId),
+  waAccountId: String(waAccountId),
+  conversationId: String(conversationId),
+  inbound: true,
+  from: String(from),
+  text: text && text !== "null" ? String(text) : null,
+  type: req.body.type || "TEXT",
+  waMessageId: waMessageId || Date.now(),
+  mediaUrl: req.body.mediaUrl || null,          // 🔥 ADD
+  mediaMimeType: req.body.mediaMimeType || null,// 🔥 ADD
+  mediaCaption: req.body.mediaCaption || null,  // 🔥 ADD
+  timestamp: Date.now()
+};
+
+
+  const waRoom =
+    `branch_${branchId}:app_${appId}:wa_${waAccountId}`;
+  const convRoom =
+    `${waRoom}:conv_${conversationId}`;
+
+  console.log("📡 Emitting to:", waRoom, convRoom);
+
+  console.log(
+  "👥 sockets in WA room:",
+  io.sockets.adapter.rooms.get(waRoom)?.size || 0
+);
+
+console.log(
+  "👥 sockets in CONV room:",
+  io.sockets.adapter.rooms.get(convRoom)?.size || 0
+);
+
+
+  io.to(waRoom).emit("new_message_customer", payload);
+
+  if (conversationId) {
+    io.to(convRoom).emit("new_message_customer", payload);
+  }
+
+  res.json({ success: true });
+});
+
 
 /* ===============================
    SERVER START
