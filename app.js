@@ -109,7 +109,10 @@ app.post("/api/send_message", (req, res) => {
     text,
     waMessageId,
     profileName,
-    customerId
+    customerId,
+    ldStage,
+    ldStatus,
+    ldId,
   } = req.body;
 
   const branchId = brId;
@@ -134,7 +137,10 @@ app.post("/api/send_message", (req, res) => {
     mediaCaption: req.body.mediaCaption || null,  // 🔥 ADD
     timestamp: Date.now(),
     profileName: profileName || null,
-    customerId:customerId
+    customerId:customerId,
+    ldStage:ldStage,
+    ldId:ldId,
+    ldStatus:ldStatus
   };
   console.log(payload)
 
