@@ -113,6 +113,7 @@ app.post("/api/send_message", (req, res) => {
     ldStage,
     ldStatus,
     ldId,
+    unreadcount,
   } = req.body;
 
   const branchId = brId;
@@ -140,7 +141,9 @@ app.post("/api/send_message", (req, res) => {
     customerId:customerId,
     ldStage:ldStage,
     ldId:ldId,
-    ldStatus:ldStatus
+    ldStatus:ldStatus,
+    unreadcount:unreadcount,
+
   };
   console.log(payload)
 
